@@ -34,3 +34,20 @@ app.get('/allcards', async (req, res) => {
         res.status(500).json({message: 'Server error for all cards'});
     }
 });
+
+app.post('/addcard', async (req, res) => {
+    const { cardname, cardpic } = req.body;
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute(
+            'INSERT INTO cards (card_name, card_pic) VALUES (?, ?)',
+            [cardname, cardpic]
+        );
+        await connection.end();
+        res.json({ message: 'Card added successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Failed to add card' });
+    }
+});
