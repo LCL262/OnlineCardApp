@@ -35,6 +35,18 @@ app.get('/allcards', async (req, res) => {
     }
 });
 
+app.get('/addcard', async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT * FROM cards');
+        await connection.end();
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error fetching cards' });
+    }
+});
+
 app.post('/addcard', async (req, res) => {
     const { cardname, cardpic } = req.body;
 
