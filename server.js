@@ -27,7 +27,7 @@ app.listen(port, () => {console.log('Listening on port: ', port);});
 app.get('/allcards', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM edfaultdb.cards');
+        const [rows] = await connection.execute('SELECT * FROM cards');
         res.json(rows);
     } catch (err) {
         console.error(err);
