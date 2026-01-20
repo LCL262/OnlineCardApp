@@ -2,15 +2,14 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 const port = 3000;
-const cors = require('cors'); // Add this line at top
+const cors = require('cors');
 
 const allowedOrigins = [
     "http://localhost:3000",
-    "http://localhost:5173",  // Add this for Vite
-    "http://localhost:5174",  // Sometimes Vite uses this
+    "http://localhost:5173",
+    "http://localhost:5174",
 ];
 
-//database config info
 const dbConfig = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -22,14 +21,12 @@ const dbConfig = {
     queueLimit: 0,
 };
 
-//initialize Express App
 const app = express();
-//helps app to read json
+
 app.use(express.json());
 app.use(
     cors({
         origin: function (origin, callback) {
-// allow requests with no origin (Postman/server-to-server)
             if (!origin) return callback(null, true);
             if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
@@ -42,15 +39,15 @@ app.use(
     })
 );
 
-
-//Start the server
 app.listen(port, () => {console.log('Listening on port: ', port);});
 
-//Example route: get all cards
+// Get all cards - FIXED: Use AS to rename columns
 app.get('/allcards', async (req, res) => {
     try {
         let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM cards');
+        const [rows] = await connection.execute(
+            'SELECT id, card_name AS cardname, card_pic AS cardpic FROM cards'
+        );
         res.json(rows);
     } catch (err) {
         console.error(err);
@@ -58,18 +55,10 @@ app.get('/allcards', async (req, res) => {
     }
 });
 
-app.get('/addcard', async (req, res) => {
-    try {
-        const connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM cards');
-        await connection.end();
-        res.json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error fetching cards' });
-    }
-});
+// Remove this duplicate route (not needed)
+// app.get('/addcard', async (req, res) => { ... });
 
+// Add a new card
 app.post('/addcard', async (req, res) => {
     const { cardname, cardpic } = req.body;
 
@@ -87,6 +76,7 @@ app.post('/addcard', async (req, res) => {
     }
 });
 
+// Delete a card
 app.delete('/deletecard/:id', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
