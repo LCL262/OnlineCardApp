@@ -6,8 +6,8 @@ const cors = require('cors'); // Add this line at top
 
 const allowedOrigins = [
     "http://localhost:3000",
-// "https://YOUR-frontend.vercel.app", // add later
-// "https://YOUR-frontend.onrender.com" // add later
+    "http://localhost:5173",  // Add this for Vite
+    "http://localhost:5174",  // Sometimes Vite uses this
 ];
 
 //database config info
