@@ -2,6 +2,8 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 const port = 3000;
+const cors = require('cors'); // Add this line at top
+
 
 //database config info
 const dbConfig = {
@@ -19,6 +21,7 @@ const dbConfig = {
 const app = express();
 //helps app to read json
 app.use(express.json());
+app.use(cors()); // Add this line after creating app
 
 //Start the server
 app.listen(port, () => {console.log('Listening on port: ', port);});
