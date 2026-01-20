@@ -4,6 +4,11 @@ require('dotenv').config();
 const port = 3000;
 const cors = require('cors'); // Add this line at top
 
+const allowedOrigins = [
+    "http://localhost:3000",
+// "https://YOUR-frontend.vercel.app", // add later
+// "https://YOUR-frontend.onrender.com" // add later
+];
 
 //database config info
 const dbConfig = {
@@ -21,7 +26,22 @@ const dbConfig = {
 const app = express();
 //helps app to read json
 app.use(express.json());
-app.use(cors()); // Add this line after creating app
+app.use(
+    cors({
+        origin: function (origin, callback) {
+// allow requests with no origin (Postman/server-to-server)
+            if (!origin) return callback(null, true);
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error("Not allowed by CORS"));
+        },
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: false,
+    })
+);
+
 
 //Start the server
 app.listen(port, () => {console.log('Listening on port: ', port);});
