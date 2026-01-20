@@ -66,3 +66,34 @@ app.post('/addcard', async (req, res) => {
         res.status(500).json({ message: 'Failed to add card' });
     }
 });
+
+app.delete('/deletecard/:id', async (req, res) => {
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute('DELETE FROM cards WHERE id = ?', [req.params.id]);
+        await connection.end();
+        res.json({ message: 'Card deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Failed to delete card' });
+    }
+});
+
+// Edit/Update a card
+app.put('/editcard/:id', async (req, res) => {
+    const { cardname, cardpic } = req.body;
+    const cardId = req.params.id;
+
+    try {
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute(
+            'UPDATE cards SET card_name = ?, card_pic = ? WHERE id = ?',
+            [cardname, cardpic, cardId]
+        );
+        await connection.end();
+        res.json({ message: 'Card updated successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Failed to update card' });
+    }
+});
