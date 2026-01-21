@@ -87,7 +87,7 @@ app.post('/addcard', async (req, res) => {
     }
 });
 
-/*app.put('/updatecard/:id', async (req, res) => {
+app.put('/updatecard/:id', async (req, res) => {
     const { id } = req.params;
     const { cardname, cardpic } = req.body;
     try{
@@ -100,7 +100,7 @@ app.post('/addcard', async (req, res) => {
     }
 });
 
-// Example Route: Delete a card
+/*// Example Route: Delete a card
 app.delete('/deletecard/:id', async (req, res) => {
     const { id } = req.params;
     try{
@@ -126,7 +126,7 @@ app.delete('/deletecard/:id', async (req, res) => {
 });
 
 // Edit/Update a card
-app.put('/editcard/:id', async (req, res) => {
+/*app.put('/editcard/:id', async (req, res) => {
     const { cardname, cardpic } = req.body;
     const cardId = req.params.id;
 
@@ -142,4 +142,4 @@ app.put('/editcard/:id', async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Failed to update card' });
     }
-});
+});*/
