@@ -35,7 +35,7 @@ const cors = require("cors");
 
 const allowedOrigins = [
     "http://localhost:3000",
-    "https://card-app-smoky.vercel.app",
+    "c219-card-app-git-main-lcl262s-projects.vercel.app",
     // "https://YOUR-frontend.onrender.com"
 ];
 
@@ -115,9 +115,9 @@ app.get("/allcards", async (req, res) => {
 
 // add a new card
 app.post("/addcard", requireAuth, async (req, res) => {
-    const { card_name, card_pic } = req.body;
+    const { cardname, cardpic } = req.body;
 
-    if (!card_name || !card_pic) {
+    if (!cardname || !cardpic) {
         return res
             .status(400)
             .json({ error: "card_name and card_pic are required" });
@@ -125,8 +125,8 @@ app.post("/addcard", requireAuth, async (req, res) => {
 
     try {
         const [result] = await pool.query(
-            "INSERT INTO cards (card_name, card_pic) VALUES (?, ?)",
-            [card_name, card_pic],
+            "INSERT INTO cards (cardname, cardpic) VALUES (?, ?)",
+            [cardname, cardpic],
         );
         res.status(201).json(result);
     } catch (error) {
@@ -138,9 +138,9 @@ app.post("/addcard", requireAuth, async (req, res) => {
 // update a card, week 10
 app.put("/updatecard/:id", async (req, res) => {
     const { id } = req.params;
-    const { card_name, card_pic } = req.body;
+    const { cardname, cardpic } = req.body;
 
-    if (!card_name || !card_pic) {
+    if (!cardname || !cardpic) {
         return res
             .status(400)
             .json({ error: "card_name and card_pic are required" });
@@ -148,8 +148,8 @@ app.put("/updatecard/:id", async (req, res) => {
 
     try {
         const [result] = await pool.query(
-            "UPDATE cards SET card_name = ?, card_pic = ? WHERE id = ?",
-            [card_name, card_pic, id],
+            "UPDATE cards SET cardname = ?, cardpic = ? WHERE id = ?",
+            [cardname, cardpic, id],
         );
 
         if (result.affectedRows === 0) {
