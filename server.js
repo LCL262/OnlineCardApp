@@ -1,36 +1,50 @@
-const express = require('express');
-const mysql = require('mysql2/promise');
-require('dotenv').config();
-const port = 3000;
-const cors = require('cors'); // Add this line at top
+// include the required modules
+const express = require("express");
+const mysql = require("mysql2/promise");
+require("dotenv").config();
 
-const allowedOrigins = [
-    "http://localhost:3000",
-    "http://localhost:5173",  // Add this for Vite
-    "http://localhost:5174",  // Sometimes Vite uses this
-];
+// initialize express app
+const app = express();
+app.use(express.json());
 
-//database config info
+const port = process.env.PORT || 3000;
+
+// database connection configuration
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
+    host: (process.env.DB_HOST || "").trim(),
+    user: (process.env.DB_USER || "").trim(),
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT,
+    database: (process.env.DB_NAME || "").trim(),
+    port: Number(process.env.DB_PORT) || 3306,
+
+    // pool options (these only apply when using createPool)
     waitForConnections: true,
     connectionLimit: 100,
     queueLimit: 0,
 };
 
-//initialize Express App
-const app = express();
-//helps app to read json
-app.use(express.json());
+// create ONE pool for the whole app (do this once)
+const pool = mysql.createPool(dbConfig);
+
+// start the server
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
+
+const cors = require("cors");
+
+const allowedOrigins = [
+    "http://localhost:3000",
+    "https://card-app-smoky.vercel.app",
+    // "https://YOUR-frontend.onrender.com"
+];
+
 app.use(
     cors({
         origin: function (origin, callback) {
-// allow requests with no origin (Postman/server-to-server)
+            // allow requests with no origin (Postman/server-to-server)
             if (!origin) return callback(null, true);
+
             if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
             }
@@ -39,107 +53,138 @@ app.use(
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
         credentials: false,
-    })
+    }),
 );
 
+const DEMO_USER = { id: 1, username: "admin", password: "admin123" };
 
-//Start the server
-app.listen(port, () => {console.log('Listening on port: ', port);});
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = process.env.JWT_SECRET;
 
-//Example route: get all cards
-app.get('/allcards', async (req, res) => {
+app.post("/login", async (req, res) => {
+    const { username, password } = req.body;
+
+    if (username !== DEMO_USER.username || password !== DEMO_USER.password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // create a token using the JWT secret
+    const token = jwt.sign(
+        { id: DEMO_USER.id, username: DEMO_USER.username },
+        JWT_SECRET,
+        { expiresIn: "1h" },
+    );
+
+    res.json({ token });
+});
+
+// Middleware to protect routes
+function requireAuth(req, res, next) {
+    const header = req.headers.authorization; // "Bearer TOKEN"
+
+    if (!header) {
+        return res.status(401).json({ error: "Authorization header required" });
+    }
+
+    const [type, token] = header.split(" ");
+    if (type !== "Bearer" || !token) {
+        return res.status(401).json({ error: "Invalid authorization format" });
+    }
+
     try {
-        let connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM cards');
+        const payload = jwt.verify(token, JWT_SECRET);
+        req.user = payload; // attach user info to request
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: "Invalid token" });
+    }
+}
+
+// get all cards
+app.get("/allcards", async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT * FROM cards");
         res.json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({message: 'Server error for all cards'});
+    } catch (error) {
+        console.error("Error fetching cards:", error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error for getting all cards" });
     }
 });
 
-app.get('/addcard', async (req, res) => {
-    try {
-        const connection = await mysql.createConnection(dbConfig);
-        const [rows] = await connection.execute('SELECT * FROM cards');
-        await connection.end();
-        res.json(rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error fetching cards' });
+// add a new card
+app.post("/addcard", requireAuth, async (req, res) => {
+    const { card_name, card_pic } = req.body;
+
+    if (!card_name || !card_pic) {
+        return res
+            .status(400)
+            .json({ error: "card_name and card_pic are required" });
     }
-});
-
-app.post('/addcard', async (req, res) => {
-    const { cardname, cardpic } = req.body;
 
     try {
-        const connection = await mysql.createConnection(dbConfig);
-        await connection.execute(
-            'INSERT INTO cards (cardname, cardpic) VALUES (?, ?)',
-            [cardname, cardpic]
+        const [result] = await pool.query(
+            "INSERT INTO cards (card_name, card_pic) VALUES (?, ?)",
+            [card_name, card_pic],
         );
-        await connection.end();
-        res.json({ message: 'Card added successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to add card' });
+        res.status(201).json(result);
+    } catch (error) {
+        console.error("Error adding card:", error);
+        res.status(500).json({ error: "Internal Server Error for adding a card" });
     }
 });
 
-app.put('/updatecard/:id', async (req, res) => {
+// update a card, week 10
+app.put("/updatecard/:id", async (req, res) => {
     const { id } = req.params;
-    const { cardname, cardpic } = req.body;
-    try{
-        let connection = await mysql.createConnection(dbConfig);
-        await connection.execute('UPDATE cards SET cardname=?, cardpic=? WHERE id=?', [cardname, cardpic, id]);
-        res.status(201).json({ message: 'Card ' + id + ' updated successfully!' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error - could not update card ' + id });
-    }
-});
+    const { card_name, card_pic } = req.body;
 
-/*// Example Route: Delete a card
-app.delete('/deletecard/:id', async (req, res) => {
-    const { id } = req.params;
-    try{
-        let connection = await mysql.createConnection(dbConfig);
-        await connection.execute('DELETE FROM cards WHERE id=?', [id]);
-        res.status(201).json({ message: 'Card ' + id + ' deleted successfully!' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error - could not delete card ' + id });
+    if (!card_name || !card_pic) {
+        return res
+            .status(400)
+            .json({ error: "card_name and card_pic are required" });
     }
-});*/
-
-app.delete('/deletecard/:id', async (req, res) => {
-    try {
-        const connection = await mysql.createConnection(dbConfig);
-        await connection.execute('DELETE FROM cards WHERE id = ?', [req.params.id]);
-        await connection.end();
-        res.json({ message: 'Card deleted successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to delete card' });
-    }
-});
-
-// Edit/Update a card
-/*app.put('/editcard/:id', async (req, res) => {
-    const { cardname, cardpic } = req.body;
-    const cardId = req.params.id;
 
     try {
-        const connection = await mysql.createConnection(dbConfig);
-        await connection.execute(
-            'UPDATE cards SET card_name = ?, card_pic = ? WHERE id = ?',
-            [cardname, cardpic, cardId]
+        const [result] = await pool.query(
+            "UPDATE cards SET card_name = ?, card_pic = ? WHERE id = ?",
+            [card_name, card_pic, id],
         );
-        await connection.end();
-        res.json({ message: 'Card updated successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to update card' });
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Card not found" });
+        }
+
+        res
+            .status(200)
+            .json({ message: "Card updated", affectedRows: result.affectedRows });
+    } catch (error) {
+        console.error("Error updating card:", error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error for updating a card" });
     }
-});*/
+});
+
+// delete a card, week 10
+app.delete("/deletecard/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [result] = await pool.query("DELETE FROM cards WHERE id = ?", [id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Card not found" });
+        }
+
+        res
+            .status(200)
+            .json({ message: "Card deleted", affectedRows: result.affectedRows });
+    } catch (error) {
+        console.error("Error deleting card:", error);
+        res
+            .status(500)
+            .json({ error: "Internal Server Error for deleting a card" });
+    }
+});
