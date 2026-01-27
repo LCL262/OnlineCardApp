@@ -36,7 +36,7 @@ const cors = require("cors");
 const allowedOrigins = [
     "http://localhost:3000",
     "c219-card-app-git-main-lcl262s-projects.vercel.app",
-    // "https://YOUR-frontend.onrender.com"
+    "https://c219-card-app.vercel.app/"
 ];
 
 app.use(
